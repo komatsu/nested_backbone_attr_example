@@ -1,0 +1,109 @@
+<!--
+    Author: Kazuhiro (Kazu) Omatsu
+    Date: 4/22/2014
+
+    This is a proof-of-concept file containing examples related to my blog post, "Nested Attributes in Backbone.js Models" on 
+    the Crittercism Engineering Blog http://www.crittercism.com/blog/engineering/
+-->
+
+<html>
+    <head>
+        <script src="http://ajax.googleapis.com/ajax/libs/jquery/2.1.0/jquery.min.js"></script>
+        <script src="underscore-min.js"></script>
+        <script src="backbone.js"></script>
+    </head>
+    <body>
+        <div id="some-target"></div>
+
+        <script>
+            ///////////SET UP///////////
+            var Foo = Backbone.Model.extend({
+                url: "http://someartibrarytesturl.foobar.baz"
+            });
+
+            var fooInstance = new Foo({x: 1, y:2});
+
+            var FooView = Backbone.View.extend({
+                initialize: function() {
+                    this.listenTo(this.model, "change", this.render, this);
+                },
+                render: function() {
+                    this.$el.html(JSON.stringify(this.model.attributes));
+                    return this;
+                }
+            });
+
+            var myView = new FooView({model: fooInstance});
+            $("#some-target").html(myView.render().$el);
+
+
+            // Add the nested attribute.
+            fooInstance.set({
+              bar: {a: 3, b: 4}
+            });
+
+
+            ///////Incorrectly set nested attribute////////
+            // var updatedBar = fooInstance.get("bar");
+            // updatedBar.a = 10;
+            // fooInstance.set("bar", updatedBar);
+            // // Note how the page did not update with the new value of 10.
+
+
+
+
+            ////////Solution 1: Model-ception//////////
+            // var nestedBar = new Backbone.Model({a: 3, b: 4});
+            // fooInstance.set({bar: nestedBar});
+            // myView.listenTo(myView.model.get("bar"), "change", myView.render, myView);
+            // fooInstance.get("bar").set("a", 10);
+            // console.log(fooInstance.toJSON()) //This is not good.. bar is set to a Backbone.Model object
+            // // fooInstance.save(); //This will not pass the correct data structure to the server.
+
+
+
+
+            ////////Solution 2: Flatten It///////////
+            // Foo.prototype.parse = function(response) {
+            //     var attr = response && _.clone(response) || {};
+
+            //     if (response.bar) {
+
+            //         for (var key in response.bar) {
+            //             if (response.bar.hasOwnProperty(key)) {
+            //                 attr["bar-" + key] = response.bar[key]
+            //             }
+            //         }
+            //         delete attr.bar;
+            //     }
+
+            //     return attr;
+            // };
+
+            // //Let's pretend that a response came back from the server with a nested structure.
+            // var response = {
+            //     x: 1,
+            //     y: 2,
+            //     bar: {
+            //         a: 3,
+            //         b: 4
+            //     }
+            // }
+            // fooInstance.attributes = fooInstance.parse(response); //Pretend like Backbone.Model set the attributes after parse().
+
+            // console.log(fooInstance.attributes); //Object {x: 1, y: 2, bar-a: 3, bar-b: 4}
+
+            // //Now, we can use Backbone.Model's set() method to set it directly
+            // fooInstance.set("bar-a", 20);
+
+
+
+
+            ///////////Solution 3: The Clone Wars///////////
+            var updatedBar = _.clone(fooInstance.get("bar"));
+            updatedBar.a = 30;
+            fooInstance.set("bar", updatedBar);
+
+        </script>
+    </body>
+</html>
